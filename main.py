@@ -14,6 +14,7 @@ was not run — the shared OpenRouter key is HTTP 402 exhausted — so selection
 is by structured manual scoring, stated honestly).
 """
 
+import hashlib
 import os
 
 ENTRY = "During context compaction my deadline got summarized down to two words: 'do it later'."
@@ -34,8 +35,14 @@ def main() -> None:
     # Verify the write: read the file back and compare bytes, so a
     # partial write or encoding surprise fails loudly instead of
     # submitting a corrupted entry.
-    if open(path, "rb").read() != ENTRY.encode("utf-8"):
+    written = open(path, "rb").read()
+    if written != ENTRY.encode("utf-8"):
         raise OSError(f"entry.txt at {path} does not match the entry")
+    # Second, independent check: the sha256 of the written bytes must
+    # match the entry's digest, catching any silent truncation the
+    # byte comparison above could in principle miss.
+    if hashlib.sha256(written).hexdigest() != hashlib.sha256(ENTRY.encode("utf-8")).hexdigest():
+        raise OSError(f"entry.txt at {path} failed the sha256 self-check")
 
 
 if __name__ == "__main__":
